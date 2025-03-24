@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steam Screenshots Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #121212;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button {
+            background-color: #1a9fff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0d8ae5;
+        }
+        .screenshot {
+            margin: 10px;
+            display: inline-block;
+            border: 2px solid #2a475e;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .screenshot:hover {
+            transform: scale(1.03);
+            border-color: #66c0f4;
+        }
+        .screenshot img {
+            width: 300px;
+            height: auto;
+            display: block;
+        }
+        .loading {
+            margin: 20px;
+            font-size: 18px;
+        }
+        .error {
+            color: #ff6b6b;
+            margin: 20px;
+            font-size: 18px;
+        }
+        .info-bar {
+            background-color: #2a475e;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .count-badge {
+            background-color: #66c0f4;
+            color: #151515;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #2a475e;
+            border-radius: 4px;
+            margin: 20px 0;
+            padding: 3px;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #66c0f4;
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.3s ease;
+            text-align: center;
+            line-height: 20px;
+            color: #151515;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Steam Screenshots Viewer</h1>
+    <div>
+        <input type="text" id="steamID" placeholder="Enter Steam ID">
+        <button onclick="fetchScreenshots()">Get ALL Screenshots</button>
+    </div>
+
+    <div id="progress-container" style="display: none;" class="progress-container">
+        <div id="progress-bar" class="progress-bar">Loading...</div>
+    </div>
+
+    <div id="info-container"></div>
+    <div class="container" id="screenshots"></div>
+
+    <script>
+        // Show progress bar
+        function showProgress(percent) {
+            const progressContainer = document.getElementById("progress-container");
+            const progressBar = document.getElementById("progress-bar");
+            
+            progressContainer.style.display = "block";
+            progressBar.style.width = percent + "%";
+            progressBar.textContent = percent + "%";
+        }
+        
+        // Hide progress bar
+        function hideProgress() {
+            document.getElementById("progress-container").style.display = "none";
+        }
+
+        async function fetchScreenshots() {
+            const steamID = document.getElementById("steamID").value;
+            if (!steamID) {
+                alert("Please enter a Steam ID");
+                return;
+            }
+            
+            // Show loading state
+            const container = document.getElementById("screenshots");
+            const infoContainer = document.getElementById("info-container");
+            container.innerHTML = "<div class='loading'>Loading ALL screenshots... This may take a while.</div>";
+            infoContainer.innerHTML = "";
+            showProgress(10);
+
+            try {
+                showProgress(20);
+                const response = await fetch(`http://localhost:3000/screenshots/${steamID}`);
+                showProgress(70);
+                const data = await response.json();
+                showProgress(90);
+                
+                container.innerHTML = "";
+
+                if (data.error) {
+                    container.innerHTML = `<div class="error">${data.error}</div>`;
+                    hideProgress();
+                    return;
+                }
+
+                const screenshots = Array.isArray(data) ? data : [];
+                
+                // Display screenshots
+                if (screenshots.length === 0) {
+                    container.innerHTML = "<div class='error'>No screenshots found. Profile might be private.</div>";
+                    hideProgress();
+                    return;
+                }
+
+                // Show info bar with count
+                infoContainer.innerHTML = `
+                    <div class="info-bar">
+                        Displaying <span class="count-badge">${screenshots.length}</span> screenshots
+                    </div>
+                `;
+
+                // Display the screenshots
+                screenshots.forEach(screenshot => {
+                    const div = document.createElement("div");
+                    div.className = "screenshot";
+                    div.innerHTML = `
+                        <a href="${screenshot.pageUrl}" target="_blank">
+                            <img src="${screenshot.imageUrl}" alt="Steam Screenshot" loading="lazy">
+                        </a>
+                    `;
+                    container.appendChild(div);
+                });
+                
+                showProgress(100);
+                // Hide progress after a moment
+                setTimeout(hideProgress, 1000);
+                
+            } catch (error) {
+                console.error("Error fetching screenshots:", error);
+                container.innerHTML = 
+                    `<div class="error">Error connecting to server. Make sure the backend is running at http://localhost:3000</div>`;
+                hideProgress();
+            }
+        }
+
+        // Allow pressing Enter key in the input field to submit
+        document.getElementById("steamID").addEventListener("keyup", function(event) {
+            if (event.key === "Enter") {
+                fetchScreenshots();
+            }
+        });
+    </script>
+</body>
+</html>
