@@ -1,4 +1,4 @@
-# steam-user-screenshots-using-scrapping
+# Steam-User-Screenshots-Using-Scrapping
 
  ![scrapping](scrapping.png)  
 
