@@ -158,5 +158,5 @@ app.listen(PORT, () => {
 // For testing in this environment
 // Replace with a valid Steam ID to test
 const testSteamID = "76561198000000000"; // Example ID, replace with real one
-console.log("This is a test run in the v0 environment");
+
 console.log(`To use this in your project, run it with Node.js and make API calls to http://localhost:3000/screenshots/{steamID}`);
