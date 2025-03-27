@@ -241,5 +241,5 @@ app.listen(PORT, () => {
 });
 
 // For testing in this environment
-console.log("This is a test run in the v0 environment");
+
 console.log(`To use this in your project, run it with Node.js and make API calls to http://localhost:3000/screenshots/{steamID}`);
