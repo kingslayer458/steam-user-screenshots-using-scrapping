@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steam Screenshots Viewer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        :root {
+            --steam-blue: #1a9fff;
+            --steam-dark-blue: #2a475e;
+            --steam-light-blue: #66c0f4;
+            --steam-bg: #1b2838;
+            --steam-darker: #121212;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            background: linear-gradient(135deg, var(--steam-bg) 0%, var(--steam-darker) 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, var(--steam-blue), var(--steam-light-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: titleGlow 2s ease-in-out infinite alternate;
+        }
+
+        .container {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .search-container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            width: 300px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--steam-blue);
+            box-shadow: 0 0 0 3px rgba(26, 159, 255, 0.3);
+        }
+
+        button {
+            background: linear-gradient(45deg, var(--steam-blue), var(--steam-light-blue));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(26, 159, 255, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .screenshot {
+            position: relative;
+            border: 2px solid var(--steam-dark-blue);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.05);
+            animation: cardAppear 0.5s ease-out backwards;
+        }
+
+        .screenshot:hover {
+            transform: scale(1.03) translateY(-5px);
+            border-color: var(--steam-light-blue);
+            box-shadow: 0 10px 30px rgba(102, 192, 244, 0.2);
+        }
+
+        .screenshot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.4s ease;
+        }
+
+        .screenshot:hover img {
+            filter: brightness(1.1);
+        }
+
+        .info-bar {
+            background: rgba(42, 71, 94, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            margin: 20px auto;
+            border-radius: 10px;
+            max-width: 800px;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        .count-badge {
+            background: var(--steam-light-blue);
+            color: var(--steam-darker);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .progress-container {
+            background: rgba(42, 71, 94, 0.3);
+            border-radius: 10px;
+            margin: 20px auto;
+            padding: 4px;
+            max-width: 800px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 24px;
+            background: linear-gradient(45deg, var(--steam-blue), var(--steam-light-blue));
+            border-radius: 6px;
+            transition: width 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            animation: shimmer 1.5s infinite;
+        }
+
+        .gallery-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .screenshot-count {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .screenshot:hover .screenshot-count {
+            opacity: 1;
+        }
+
+        .loading {
+            font-size: 20px;
+            color: var(--steam-light-blue);
+            margin: 40px 0;
+            animation: pulse 2s infinite;
+        }
+
+        .error {
+            background: rgba(255, 107, 107, 0.1);
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px auto;
+            max-width: 600px;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes titleGlow {
+            0% { text-shadow: 0 0 10px rgba(26, 159, 255, 0.2); }
+            100% { text-shadow: 0 0 20px rgba(26, 159, 255, 0.4); }
+        }
+
+        @keyframes cardAppear {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                padding: 10px;
+            }
+
+            input {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .gallery-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .gallery-controls button {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Steam Screenshots Viewer</h1>
+    <div class="search-container">
+        <input type="text" id="steamID" placeholder="Enter Steam ID">
+        <button id="fetchButton" onclick="fetchScreenshots()">Get ALL Screenshots</button>
+    </div>
+
+    <div id="progress-container" style="display: none;" class="progress-container">
+        <div id="progress-bar" class="progress-bar">Loading...</div>
+    </div>
+    <div id="status-message" class="status-message"></div>
+
+    <div id="info-container"></div>
+    <div id="gallery-controls" class="gallery-controls" style="display: none;">
+        <button onclick="downloadAllScreenshots()">Download All</button>
+        <button onclick="sortByNewest()">Sort by Newest</button>
+        <button onclick="sortByOldest()">Sort by Oldest</button>
+    </div>
+    <div class="container" id="screenshots"></div>
+
+    <script>
+        let allScreenshots = [];
+        let progressCheckInterval = null;
+        
+        function showProgress(percent, message) {
+            const progressContainer = document.getElementById("progress-container");
+            const progressBar = document.getElementById("progress-bar");
+            const statusMessage = document.getElementById("status-message");
+            
+            progressContainer.style.display = "block";
+            progressBar.style.width = percent + "%";
+            progressBar.textContent = percent + "%";
+            
+            if (message) {
+                statusMessage.textContent = message;
+                statusMessage.style.display = "block";
+            }
+        }
+        
+        function hideProgress() {
+            document.getElementById("progress-container").style.display = "none";
+            document.getElementById("status-message").style.display = "none";
+        }
+        
+        async function checkProgress(steamID) {
+            try {
+                const response = await fetch(`http://localhost:3000/progress/${steamID}`);
+                const data = await response.json();
+                
+                showProgress(data.progress, data.status);
+                
+                if (data.progress >= 100) {
+                    clearInterval(progressCheckInterval);
+                }
+            } catch (error) {
+                console.error("Error checking progress:", error);
+            }
+        }
+
+        async function fetchScreenshots() {
+            const steamID = document.getElementById("steamID").value;
+            if (!steamID) {
+                alert("Please enter a Steam ID");
+                return;
+            }
+            
+            const fetchButton = document.getElementById("fetchButton");
+            fetchButton.disabled = true;
+            fetchButton.textContent = "Fetching...";
+            
+            const container = document.getElementById("screenshots");
+            const infoContainer = document.getElementById("info-container");
+            const galleryControls = document.getElementById("gallery-controls");
+            
+            container.innerHTML = "<div class='loading'>Loading ALL screenshots... This may take a while.</div>";
+            infoContainer.innerHTML = "";
+            galleryControls.style.display = "none";
+            
+            showProgress(0, "Starting request...");
+            
+            clearInterval(progressCheckInterval);
+            progressCheckInterval = setInterval(() => checkProgress(steamID), 1000);
+
+            try {
+                const response = await fetch(`http://localhost:3000/screenshots/${steamID}`);
+                const data = await response.json();
+                
+                clearInterval(progressCheckInterval);
+                
+                fetchButton.disabled = false;
+                fetchButton.textContent = "Get ALL Screenshots";
+                
+                container.innerHTML = "";
+
+                if (data.error) {
+                    container.innerHTML = `<div class="error">${data.error}</div>`;
+                    hideProgress();
+                    return;
+                }
+
+                allScreenshots = Array.isArray(data) ? data : [];
+                
+                if (allScreenshots.length === 0) {
+                    container.innerHTML = "<div class='error'>No screenshots found. Profile might be private.</div>";
+                    hideProgress();
+                    return;
+                }
+
+                infoContainer.innerHTML = `
+                    <div class="info-bar">
+                        Displaying <span class="count-badge">${allScreenshots.length}</span> screenshots
+                    </div>
+                `;
+                
+                galleryControls.style.display = "flex";
+                displayScreenshots(allScreenshots);
+                
+                showProgress(100, "Completed!");
+                setTimeout(hideProgress, 2000);
+                
+            } catch (error) {
+                console.error("Error fetching screenshots:", error);
+                container.innerHTML = 
+                    `<div class="error">Error connecting to server. Make sure the backend is running at http://localhost:3000</div>`;
+                
+                fetchButton.disabled = false;
+                fetchButton.textContent = "Get ALL Screenshots";
+                
+                clearInterval(progressCheckInterval);
+                hideProgress();
+            }
+        }
+        
+        function displayScreenshots(screenshots) {
+            const container = document.getElementById("screenshots");
+            container.innerHTML = "";
+            
+            screenshots.forEach((screenshot, index) => {
+                const div = document.createElement("div");
+                div.className = "screenshot";
+                div.style.position = "relative";
+                div.style.animationDelay = `${index * 0.1}s`;
+                div.innerHTML = `
+                    <a href="${screenshot.pageUrl}" target="_blank">
+                        <span class="screenshot-count">#${index + 1}</span>
+                        <img src="${screenshot.imageUrl}" alt="Steam Screenshot" loading="lazy">
+                    </a>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function sortByNewest() {
+            const sorted = [...allScreenshots].sort((a, b) => {
+                const idA = a.pageUrl.match(/\?id=(\d+)/)[1];
+                const idB = b.pageUrl.match(/\?id=(\d+)/)[1];
+                return idB - idA;
+            });
+            displayScreenshots(sorted);
+        }
+        
+        function sortByOldest() {
+            const sorted = [...allScreenshots].sort((a, b) => {
+                const idA = a.pageUrl.match(/\?id=(\d+)/)[1];
+                const idB = b.pageUrl.match(/\?id=(\d+)/)[1];
+                return idA - idB;
+            });
+            displayScreenshots(sorted);
+        }
+        
+        function downloadAllScreenshots() {
+            if (allScreenshots.length === 0) {
+                alert("No screenshots to download");
+                return;
+            }
+            
+            const urls = allScreenshots.map(s => s.imageUrl).join('\n');
+            const blob = new Blob([urls], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'steam_screenshot_urls.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById("steamID").addEventListener("keyup", function(event) {
+            if (event.key === "Enter") {
+                fetchScreenshots();
+            }
+        });
+    </script>
+</body>
+</html>
