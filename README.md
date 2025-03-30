@@ -3,7 +3,7 @@
 ## Working on fast fetching and rendering of screenshots
 
  ![scrapping](scrapping.png) 
-  ![scrapping2](scrapping2.png)  
+
    ![scrapping3](scrapping3.png)  
 
 Steam Screenshots Viewer is a web application that allows users to view all publicly available Steam screenshots of a given Steam ID. The project includes both a frontend for displaying the images and a backend for fetching them from Steam Community.
