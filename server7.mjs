@@ -210,7 +210,7 @@ async function getAllScreenshots(steamID) {
         console.log(`Found ${allScreenshotPageUrls.size} total unique screenshot pages`);
         
         // Process screenshots in smaller batches with longer delays
-        const batchSize = 3; // Process 3 screenshots simultaneously (reduced from 5)
+        const batchSize = 10; // Process 3 screenshots simultaneously (reduced from 5)
         const urls = Array.from(allScreenshotPageUrls);
         const batches = [];
         
