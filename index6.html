@@ -725,12 +725,14 @@
             gap: 24px;
             margin-top: 32px;
             transition: opacity 0.3s ease;
+            width: 100%;
         }
 
         .screenshots-grid.masonry {
             display: block;
             column-count: 1;
             column-gap: 24px;
+            width: 100%;
         }
 
         @media (min-width: 640px) {
@@ -751,6 +753,13 @@
             }
         }
 
+        .screenshots-grid.masonry .screenshot-card {
+            break-inside: avoid;
+            margin-bottom: 24px;
+            display: inline-block;
+            width: 100%;
+        }
+
         .screenshots-grid.list {
             display: flex;
             flex-direction: column;
@@ -768,6 +777,7 @@
             cursor: pointer;
             transform-style: preserve-3d;
             perspective: 1000px;
+            min-height: 300px; /* Ensure minimum height */
         }
 
         .screenshots-grid.masonry .screenshot-card {
@@ -849,6 +859,7 @@
             height: 256px;
             object-fit: cover;
             transition: all 0.4s ease;
+            display: block; /* Ensure image is displayed as block */
         }
 
         .screenshot-card:hover .screenshot-img {
@@ -2236,7 +2247,7 @@
             // Save theme preference to localStorage
             localStorage.setItem('theme', currentTheme);
         }
-
+            
         // Load saved theme
         function loadSavedTheme() {
             const savedTheme = localStorage.getItem('theme');
@@ -2301,7 +2312,7 @@
             }
             
             progressCheckInterval = setInterval(() => {
-                // Simulate progress updates since we don't have a real progress endpoint
+                // Simulate progress updates
                 const currentWidth = parseInt(progressCheckFill.style.width) || 0;
                 if (currentWidth < 95) {
                     const increment = Math.floor(Math.random() * 5);
@@ -2348,16 +2359,7 @@
                     progressCheck.style.display = 'none';
                 }, 2000);
                 
-                // Process the data
-                allScreenshots = data.map((screenshot, index) => ({
-                    ...screenshot,
-                    id: index + 1,
-                    date: new Date(Date.now() - Math.random() * 31536000000).toISOString().split('T')[0], // Random date within the last year
-                    game: ['Game 1', 'Game 2', 'Game 3'][Math.floor(Math.random() * 3)], // Random game
-                    size: `${Math.floor(Math.random() * 5) + 1}MB`, // Random file size
-                    resolution: ['1920x1080', '2560x1440', '3840x2160'][Math.floor(Math.random() * 3)] // Random resolution
-                }));
-                
+                allScreenshots = data;
                 filteredScreenshots = [...allScreenshots];
                 
                 showProgress(100, 'Completed!');
@@ -2522,6 +2524,8 @@
             } else if (currentView === 'masonry') {
                 screenshotsGrid.style.display = 'block';
                 screenshotsGrid.classList.add('masonry');
+                // Force reflow to ensure masonry layout is applied correctly
+                screenshotsGrid.offsetHeight;
             } else if (currentView === 'list') {
                 screenshotsGrid.style.display = 'flex';
                 screenshotsGrid.classList.add('list');
@@ -2577,7 +2581,7 @@
                             <div class="screenshot-info">
                                 <div>
                                     <h3 class="screenshot-title">Screenshot #${screenshot.id}</h3>
-                                    <p class="screenshot-date">${screenshot.game} • ${screenshot.date}</p>
+                                    <p class="screenshot-date">${screenshot.gameName} • ${screenshot.date}</p>
                                 </div>
                                 <div class="screenshot-actions">
                                     <button class="screenshot-action tooltip" onclick="openLightbox(${index})">
@@ -2639,7 +2643,7 @@
                                     </div>
                                     <div class="screenshot-detail">
                                         <span class="screenshot-detail-label">Game:</span>
-                                        <span>${screenshot.game}</span>
+                                        <span>${screenshot.gameName}</span>
                                     </div>
                                     <div class="screenshot-detail">
                                         <span class="screenshot-detail-label">Date:</span>
@@ -2683,6 +2687,19 @@
                     screenshotsGrid.appendChild(card);
                 });
             }
+
+            // Add a fallback mechanism for images that fail to load
+            // Add this to the displayScreenshots function where the screenshot cards are created
+
+            // Add error handling for images
+            const imgElements = document.querySelectorAll('.screenshot-img');
+            imgElements.forEach(img => {
+              img.onerror = function() {
+                // Replace with a placeholder if image fails to load
+                this.src = 'https://via.placeholder.com/800x600?text=Screenshot+Not+Available';
+                console.log('Image failed to load, replaced with placeholder');
+              };
+            });
         }
 
         // Sort functions
@@ -2772,6 +2789,11 @@
                     option.classList.remove('active');
                 }
             });
+            
+            // Clear previous view styles
+            screenshotsGrid.style.display = 'none';
+            carouselContainer.style.display = 'none';
+            screenshotsGrid.classList.remove('masonry', 'list');
             
             displayScreenshots();
         }
@@ -3338,7 +3360,7 @@
             
             fetchButton.disabled = true;
             fetchButton.innerHTML = `
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <svg class="icon icon-sm fetch-icon" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="10" stroke-width="4" stroke-dasharray="30 30" stroke-dashoffset="0" stroke="currentColor">
                         <animateTransform attributeName="transform" type="rotate" dur="1s" from="0 12 12" to="360 12 12" repeatCount="indefinite" />
                     </circle>
@@ -3397,10 +3419,11 @@
         });
 
         lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) {
-        closeLightbox();
-    }
-});
+            if (e.target === lightbox) {
+                closeLightbox();
+            }
+        });
+        
         document.addEventListener('keydown', (e) => {
             if (!lightbox.classList.contains('active')) return;
             
@@ -3494,6 +3517,18 @@
         window.openLightbox = openLightbox;
         window.editImage = editImage;
         window.downloadImage = downloadImage;
+
+        function handleResize() {
+            if (currentView === 'masonry') {
+                // Force masonry layout to recalculate
+                screenshotsGrid.classList.remove('masonry');
+                // Force reflow
+                screenshotsGrid.offsetHeight;
+                screenshotsGrid.classList.add('masonry');
+            }
+        }
+
+        window.addEventListener('resize', handleResize);
     </script>
 </body>
 </html>
