@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steam Screenshots Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --steam-blue: #1a9fff;
+            --steam-dark-blue: #2a475e;
+            --steam-light-blue: #66c0f4;
+            --steam-bg: #1b2838;
+            --steam-darker: #121212;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--steam-bg) 0%, var(--steam-darker) 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Preloader */
+        .preloader {
+            position: fixed;
+            inset: 0;
+            background-color: var(--steam-darker);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+        }
+
+        .preloader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .preloader-circle {
+            width: 128px;
+            height: 128px;
+            position: relative;
+            margin-bottom: 32px;
+        }
+
+        .preloader-circle-bg {
+            position: absolute;
+            inset: 0;
+            border: 4px solid rgba(102, 192, 244, 0.2);
+            border-radius: 50%;
+        }
+
+        .preloader-circle-progress {
+            position: absolute;
+            inset: 0;
+            border: 4px solid transparent;
+            border-top-color: var(--steam-blue);
+            border-radius: 50%;
+            animation: spin 1.5s linear infinite;
+        }
+
+        .preloader-percentage {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .preloader-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            background: linear-gradient(to right, var(--steam-blue), var(--steam-light-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: pulse 2s infinite alternate;
+        }
+
+        .preloader-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .preloader-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--steam-light-blue);
+            border-radius: 50%;
+            animation: bounce 1.5s infinite;
+        }
+
+        .preloader-dot:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .preloader-dot:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        /* Parallax Header */
+        .parallax-header {
+            position: relative;
+            height: 40vh;
+            overflow: hidden;
+        }
+
+        .parallax-bg {
+            position: absolute;
+            inset: 0;
+            background-image: url('https://picsum.photos/1920/1080');
+            background-size: cover;
+            background-position: center;
+            transform: translateY(0);
+            will-change: transform;
+        }
+
+        .parallax-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(18, 18, 18, 0.7), var(--steam-bg));
+        }
+
+        .parallax-content {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 16px;
+            transform: translateY(0);
+            will-change: transform;
+        }
+
+        .parallax-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: bold;
+            margin-bottom: 24px;
+            background: linear-gradient(to right, var(--steam-blue), var(--steam-light-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .parallax-subtitle {
+            font-size: clamp(1rem, 2vw, 1.5rem);
+            color: rgba(255, 255, 255, 0.8);
+            max-width: 768px;
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 16px;
+        }
+
+        .search-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 32px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.5s ease-out;
+            transform: translateY(0);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .search-container:hover {
+            box-shadow: 0 8px 32px rgba(102, 192, 244, 0.2);
+        }
+
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (min-width: 768px) {
+            .search-form {
+                flex-direction: row;
+            }
+        }
+
+        .input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 320px;
+            transition: all 0.3s ease;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: var(--steam-blue);
+            box-shadow: 0 0 0 3px rgba(26, 159, 255, 0.3);
+        }
+
+        .input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .button {
+            background: linear-gradient(45deg, var(--steam-blue), var(--steam-light-blue));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        @media (min-width: 768px) {
+            .button {
+                width: auto;
+            }
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(26, 159, 255, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.7;
+        }
+
+        .button-outline {
+            background: transparent;
+            border: 2px solid var(--steam-light-blue);
+            color: var(--steam-light-blue);
+        }
+
+        .button-outline:hover {
+            background: rgba(102, 192, 244, 0.1);
+        }
+
+        .progress-container {
+            background: rgba(42, 71, 94, 0.3);
+            border-radius: 10px;
+            margin: 20px auto;
+            padding: 4px;
+            max-width: 800px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 24px;
+            background: linear-gradient(45deg, var(--steam-blue), var(--steam-light-blue));
+            border-radius: 6px;
+            transition: width 0.5s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+            width: 0%;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            animation: shimmer 1.5s infinite;
+        }
+
+        .status-message {
+            text-align: center;
+            color: var(--steam-light-blue);
+            margin: 8px 0;
+            min-height: 24px;
+        }
+
+        .error {
+            background: rgba(255, 107, 107, 0.1);
+            color: #ff6b6b;
+            padding: 16px;
+            border-radius: 10px;
+            margin: 20px auto;
+            max-width: 600px;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            animation: shake 0.5s ease-in-out;
+            display: none;
+        }
+
+        .info-bar {
+            background: rgba(42, 71, 94, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 16px;
+            margin: 20px auto;
+            border-radius: 10px;
+            max-width: 800px;
+            animation: slideDown 0.5s ease-out;
+            display: none;
+        }
+
+        .count-badge {
+            background: var(--steam-light-blue);
+            color: var(--steam-darker);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .gallery-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 16px;
+            margin: 32px 0;
+            display: none;
+        }
+
+        .screenshots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            margin-top: 32px;
+        }
+
+        .screenshot-card {
+            position: relative;
+            border: 2px solid var(--steam-dark-blue);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.05);
+            animation: cardAppear 0.5s ease-out backwards;
+            cursor: pointer;
+        }
+
+        .screenshot-card:hover {
+            transform: scale(1.03) translateY(-5px);
+            border-color: var(--steam-light-blue);
+            box-shadow: 0 10px 30px rgba(102, 192, 244, 0.2);
+        }
+
+        .screenshot-count {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 2;
+        }
+
+        .screenshot-card:hover .screenshot-count {
+            opacity: 1;
+        }
+
+        .screenshot-img {
+            width: 100%;
+            height: 256px;
+            object-fit: cover;
+            transition: all 0.4s ease;
+        }
+
+        .screenshot-card:hover .screenshot-img {
+            transform: scale(1.1);
+            filter: brightness(1.1);
+        }
+
+        .screenshot-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .screenshot-card:hover .screenshot-overlay {
+            opacity: 1;
+        }
+
+        /* Lightbox */
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 9999;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .lightbox.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .lightbox-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .lightbox-prev,
+        .lightbox-next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .lightbox-prev {
+            left: 16px;
+        }
+
+        .lightbox-next {
+            right: 16px;
+        }
+
+        .lightbox-prev:hover,
+        .lightbox-next:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .lightbox-img-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            position: relative;
+        }
+
+        .lightbox-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid transparent;
+            border-top-color: var(--steam-light-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .lightbox-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: opacity 0.3s ease;
+        }
+
+        .lightbox-img.loading {
+            opacity: 0;
+        }
+
+        .lightbox-thumbnails {
+            position: absolute;
+            bottom: 24px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .lightbox-thumbnails-container {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            border-radius: 24px;
+            padding: 8px 16px;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            max-width: 80%;
+            scrollbar-width: none;
+        }
+
+        .lightbox-thumbnails-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .lightbox-thumbnail {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .lightbox-thumbnail.active {
+            width: 16px;
+            background: var(--steam-light-blue);
+        }
+
+        /* Progress Check */
+        .progress-check {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-check-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: var(--steam-light-blue);
+        }
+
+        .progress-check-status {
+            margin-bottom: 8px;
+        }
+
+        .progress-check-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-check-fill {
+            height: 100%;
+            background: var(--steam-light-blue);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Animations */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes cardAppear {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Icons */
+        .icon {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .icon-sm {
+            width: 16px;
+            height: 16px;
+        }
+
+        .icon-lg {
+            width: 32px;
+            height: 32px;
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Preloader -->
+    <div class="preloader" id="preloader">
+        <div class="preloader-circle">
+            <div class="preloader-circle-bg"></div>
+            <div class="preloader-circle-progress"></div>
+            <div class="preloader-percentage" id="preloader-percentage">0%</div>
+        </div>
+        <h1 class="preloader-title">Steam Screenshots Viewer</h1>
+        <div class="preloader-dots">
+            <div class="preloader-dot"></div>
+            <div class="preloader-dot"></div>
+            <div class="preloader-dot"></div>
+        </div>
+    </div>
+
+    <!-- Parallax Header -->
+    <div class="parallax-header" id="parallax-header">
+        <div class="parallax-bg" id="parallax-bg"></div>
+        <div class="parallax-overlay"></div>
+        <div class="parallax-content" id="parallax-content">
+            <h1 class="parallax-title">Steam Screenshots Viewer</h1>
+            <p class="parallax-subtitle">Browse and download your Steam screenshots collection with style</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="search-container">
+            <form class="search-form" id="search-form">
+                <input type="text" id="steam-id" class="input" placeholder="Enter Steam ID" required>
+                <button type="submit" id="fetch-button" class="button">
+                    <svg class="icon icon-sm fetch-icon" viewBox="0 0 24 24">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <span>Get ALL Screenshots</span>
+                </button>
+            </form>
+        </div>
+
+        <div class="progress-container" id="progress-container">
+            <div class="progress-bar" id="progress-bar">0%</div>
+        </div>
+        <div class="status-message" id="status-message"></div>
+
+        <div class="error" id="error-message"></div>
+
+        <div class="info-bar" id="info-bar">
+            Displaying <span class="count-badge" id="count-badge">0</span> screenshots
+        </div>
+
+        <div class="gallery-controls" id="gallery-controls">
+            <button class="button" id="download-all-button">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
+                </svg>
+                Download All
+            </button>
+            <button class="button button-outline" id="sort-newest-button">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <path d="M3 4h13M3 8h9M3 12h9M13 12l3-3m0 0l3 3m-3-3v9"></path>
+                </svg>
+                Sort by Newest
+            </button>
+            <button class="button button-outline" id="sort-oldest-button">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <path d="M3 4h13M3 8h9M3 12h9M13 12l3 3m0 0l3-3m-3 3V6"></path>
+                </svg>
+                Sort by Oldest
+            </button>
+        </div>
+
+        <div class="screenshots-grid" id="screenshots-grid"></div>
+    </div>
+
+    <!-- Progress Check Notification -->
+    <div class="progress-check" id="progress-check">
+        <div class="progress-check-title">Fetching Screenshots</div>
+        <div class="progress-check-status" id="progress-check-status">Processing...</div>
+        <div class="progress-check-bar">
+            <div class="progress-check-fill" id="progress-check-fill"></div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="lightbox-close">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M18 6L6 18M6 6l12 12"></path>
+                </svg>
+                <span class="sr-only">Close</span>
+            </button>
+            <button class="lightbox-prev" id="lightbox-prev">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M15 18l-6-6 6-6"></path>
+                </svg>
+                <span class="sr-only">Previous</span>
+            </button>
+            <button class="lightbox-next" id="lightbox-next">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M9 18l6-6-6-6"></path>
+                </svg>
+                <span class="sr-only">Next</span>
+            </button>
+            <div class="lightbox-img-container">
+                <div class="lightbox-loading" id="lightbox-loading">
+                    <div class="lightbox-spinner"></div>
+                </div>
+                <img src="/placeholder.svg" alt="Screenshot" class="lightbox-img loading" id="lightbox-img">
+            </div>
+            <div class="lightbox-thumbnails">
+                <div class="lightbox-thumbnails-container" id="lightbox-thumbnails"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let allScreenshots = [];
+        let currentImageIndex = 0;
+        let progressInterval = null;
+        let progressCheckInterval = null;
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const API_BASE_URL = 'http://localhost:3000';
+
+        // DOM Elements
+        const preloader = document.getElementById('preloader');
+        const preloaderPercentage = document.getElementById('preloader-percentage');
+        const parallaxHeader = document.getElementById('parallax-header');
+        const parallaxBg = document.getElementById('parallax-bg');
+        const parallaxContent = document.getElementById('parallax-content');
+        const searchForm = document.getElementById('search-form');
+        const steamIdInput = document.getElementById('steam-id');
+        const fetchButton = document.getElementById('fetch-button');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const statusMessage = document.getElementById('status-message');
+        const errorMessage = document.getElementById('error-message');
+        const infoBar = document.getElementById('info-bar');
+        const countBadge = document.getElementById('count-badge');
+        const galleryControls = document.getElementById('gallery-controls');
+        const downloadAllButton = document.getElementById('download-all-button');
+        const sortNewestButton = document.getElementById('sort-newest-button');
+        const sortOldestButton = document.getElementById('sort-oldest-button');
+        const screenshotsGrid = document.getElementById('screenshots-grid');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxClose = document.getElementById('lightbox-close');
+        const lightboxPrev = document.getElementById('lightbox-prev');
+        const lightboxNext = document.getElementById('lightbox-next');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxLoading = document.getElementById('lightbox-loading');
+        const lightboxThumbnails = document.getElementById('lightbox-thumbnails');
+        const progressCheck = document.getElementById('progress-check');
+        const progressCheckStatus = document.getElementById('progress-check-status');
+        const progressCheckFill = document.getElementById('progress-check-fill');
+
+        // Preloader
+        function simulatePreloader() {
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 10);
+                if (progress > 100) progress = 100;
+                preloaderPercentage.textContent = `${progress}%`;
+                
+                if (progress === 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        preloader.classList.add('hidden');
+                    }, 500);
+                }
+            }, 200);
+        }
+
+        // Parallax effect
+        function handleParallax() {
+            const scrollY = window.scrollY;
+            parallaxBg.style.transform = `translateY(${scrollY * 0.5}px)`;
+            parallaxContent.style.transform = `translateY(${scrollY * -0.2}px)`;
+        }
+
+        // Fetch screenshots
+        async function fetchScreenshots(steamId) {
+            showProgress(0, 'Starting request...');
+            
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+            
+            // Show progress check notification
+            progressCheck.style.display = 'block';
+            progressCheckStatus.textContent = 'Connecting to server...';
+            progressCheckFill.style.width = '0%';
+            
+            // Start progress check interval
+            if (progressCheckInterval) {
+                clearInterval(progressCheckInterval);
+            }
+            
+            progressCheckInterval = setInterval(() => {
+                // Simulate progress updates since we don't have a real progress endpoint
+                const currentWidth = parseInt(progressCheckFill.style.width) || 0;
+                if (currentWidth < 95) {
+                    const increment = Math.floor(Math.random() * 5);
+                    const newWidth = Math.min(currentWidth + increment, 95);
+                    progressCheckFill.style.width = `${newWidth}%`;
+                    
+                    // Update status messages based on progress
+                    if (newWidth < 20) {
+                        progressCheckStatus.textContent = 'Searching for screenshots...';
+                    } else if (newWidth < 40) {
+                        progressCheckStatus.textContent = 'Processing screenshot pages...';
+                    } else if (newWidth < 60) {
+                        progressCheckStatus.textContent = 'Extracting image URLs...';
+                    } else if (newWidth < 80) {
+                        progressCheckStatus.textContent = 'Preparing data...';
+                    } else {
+                        progressCheckStatus.textContent = 'Almost done...';
+                    }
+                }
+            }, 1000);
+
+            try {
+                // Make the actual API call to the server
+                const response = await fetch(`${API_BASE_URL}/screenshots/${steamId}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to fetch screenshots');
+                }
+                
+                const data = await response.json();
+                
+                // Clear intervals and hide progress indicators
+                if (progressCheckInterval) {
+                    clearInterval(progressCheckInterval);
+                }
+                
+                // Show 100% completion
+                progressCheckFill.style.width = '100%';
+                progressCheckStatus.textContent = 'Complete!';
+                
+                // Hide progress check after a delay
+                setTimeout(() => {
+                    progressCheck.style.display = 'none';
+                }, 2000);
+                
+                allScreenshots = data;
+                
+                showProgress(100, 'Completed!');
+                
+                setTimeout(() => {
+                    hideProgress();
+                    updateInfoBar();
+                    showGalleryControls();
+                    displayScreenshots();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error fetching screenshots:', error);
+                showError(error.message || 'Error connecting to server. Make sure the backend is running at http://localhost:3000');
+                
+                // Clear intervals and hide progress indicators
+                if (progressCheckInterval) {
+                    clearInterval(progressCheckInterval);
+                }
+                
+                progressCheck.style.display = 'none';
+            } finally {
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+                
+                fetchButton.disabled = false;
+                fetchButton.innerHTML = `
+                    <svg class="icon icon-sm fetch-icon" viewBox="0 0 24 24">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <span>Get ALL Screenshots</span>
+                `;
+            }
+        }
+
+        // Progress handling
+        function showProgress(percent, message) {
+            progressContainer.style.display = 'block';
+            progressBar.style.width = `${percent}%`;
+            progressBar.textContent = `${percent}%`;
+            
+            if (message) {
+                statusMessage.textContent = message;
+            }
+        }
+
+        function hideProgress() {
+            progressContainer.style.display = 'none';
+            statusMessage.textContent = '';
+        }
+
+        // Error handling
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        // Info bar
+        function updateInfoBar() {
+            countBadge.textContent = allScreenshots.length;
+            infoBar.style.display = 'block';
+        }
+
+        // Gallery controls
+        function showGalleryControls() {
+            galleryControls.style.display = 'flex';
+        }
+
+        // Display screenshots
+        function displayScreenshots() {
+            screenshotsGrid.innerHTML = '';
+            
+            allScreenshots.forEach((screenshot, index) => {
+                const card = document.createElement('div');
+                card.className = 'screenshot-card';
+                card.style.animationDelay = `${index * 0.05}s`;
+                
+                card.innerHTML = `
+                    <span class="screenshot-count">#${index + 1}</span>
+                    <img src="${screenshot.imageUrl}" alt="Steam Screenshot ${index + 1}" class="screenshot-img" loading="lazy">
+                    <div class="screenshot-overlay">
+                        <span>Click to view</span>
+                    </div>
+                `;
+                
+                card.addEventListener('click', () => {
+                    openLightbox(index);
+                });
+                
+                screenshotsGrid.appendChild(card);
+            });
+        }
+
+        // Sort functions
+        function sortByNewest() {
+            const sorted = [...allScreenshots].sort((a, b) => {
+                const idA = parseInt(a.pageUrl.match(/\?id=(\d+)/)[1]);
+                const idB = parseInt(b.pageUrl.match(/\?id=(\d+)/)[1]);
+                return idB - idA;
+            });
+            
+            allScreenshots = sorted;
+            displayScreenshots();
+        }
+
+        function sortByOldest() {
+            const sorted = [...allScreenshots].sort((a, b) => {
+                const idA = parseInt(a.pageUrl.match(/\?id=(\d+)/)[1]);
+                const idB = parseInt(b.pageUrl.match(/\?id=(\d+)/)[1]);
+                return idA - idB;
+            });
+            
+            allScreenshots = sorted;
+            displayScreenshots();
+        }
+
+        // Download all screenshots
+        function downloadAllScreenshots() {
+            if (allScreenshots.length === 0) {
+                showError('No screenshots to download');
+                return;
+            }
+            
+            const urls = allScreenshots.map(s => s.imageUrl).join('\n');
+            const blob = new Blob([urls], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'steam_screenshot_urls.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Lightbox functions
+        function openLightbox(index) {
+            currentImageIndex = index;
+            updateLightboxImage();
+            updateLightboxThumbnails();
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function prevImage() {
+            currentImageIndex = (currentImageIndex - 1 + allScreenshots.length) % allScreenshots.length;
+            updateLightboxImage();
+            updateLightboxThumbnails();
+        }
+
+        function nextImage() {
+            currentImageIndex = (currentImageIndex + 1) % allScreenshots.length;
+            updateLightboxImage();
+            updateLightboxThumbnails();
+        }
+
+        function updateLightboxImage() {
+            lightboxImg.classList.add('loading');
+            lightboxLoading.style.display = 'flex';
+            
+            const screenshot = allScreenshots[currentImageIndex];
+            lightboxImg.src = screenshot.imageUrl;
+            
+            lightboxImg.onload = () => {
+                lightboxImg.classList.remove('loading');
+                lightboxLoading.style.display = 'none';
+            };
+        }
+
+        function updateLightboxThumbnails() {
+            lightboxThumbnails.innerHTML = '';
+            
+            allScreenshots.forEach((_, index) => {
+                const thumbnail = document.createElement('div');
+                thumbnail.className = `lightbox-thumbnail ${index === currentImageIndex ? 'active' : ''}`;
+                
+                thumbnail.addEventListener('click', () => {
+                    currentImageIndex = index;
+                    updateLightboxImage();
+                    updateLightboxThumbnails();
+                });
+                
+                lightboxThumbnails.appendChild(thumbnail);
+            });
+            
+            // Scroll to active thumbnail
+            const activeThumbnail = lightboxThumbnails.querySelector('.lightbox-thumbnail.active');
+            if (activeThumbnail) {
+                activeThumbnail.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+
+        // Touch events for lightbox
+        function handleTouchStart(e) {
+            touchStartX = e.touches[0].clientX;
+        }
+
+        function handleTouchMove(e) {
+            touchEndX = e.touches[0].clientX;
+        }
+
+        function handleTouchEnd() {
+            const touchDiff = touchStartX - touchEndX;
+            
+            // Swipe threshold
+            if (Math.abs(touchDiff) > 50) {
+                if (touchDiff > 0) {
+                    // Swipe left
+                    nextImage();
+                } else {
+                    // Swipe right
+                    prevImage();
+                }
+            }
+        }
+
+        // Event listeners
+        window.addEventListener('load', () => {
+            simulatePreloader();
+        });
+
+        window.addEventListener('scroll', handleParallax);
+
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const steamId = steamIdInput.value.trim();
+            if (!steamId) {
+                showError('Please enter a Steam ID');
+                return;
+            }
+            
+            fetchButton.disabled = true;
+            fetchButton.innerHTML = `
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke-width="4" stroke-dasharray="30 30" stroke-dashoffset="0" stroke="currentColor">
+                        <animateTransform attributeName="transform" type="rotate" dur="1s" from="0 12 12" to="360 12 12" repeatCount="indefinite" />
+                    </circle>
+                </svg>
+                <span>Fetching...</span>
+            `;
+            
+            screenshotsGrid.innerHTML = '';
+            errorMessage.style.display = 'none';
+            infoBar.style.display = 'none';
+            galleryControls.style.display = 'none';
+            
+            fetchScreenshots(steamId);
+        });
+
+        downloadAllButton.addEventListener('click', downloadAllScreenshots);
+        sortNewestButton.addEventListener('click', sortByNewest);
+        sortOldestButton.addEventListener('click', sortByOldest);
+
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightboxPrev.addEventListener('click', prevImage);
+        lightboxNext.addEventListener('click', nextImage);
+
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                closeLightbox();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (!lightbox.classList.contains('active')) return;
+            
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') prevImage();
+            if (e.key === 'ArrowRight') nextImage();
+        });
+
+        lightbox.addEventListener('touchstart', handleTouchStart);
+        lightbox.addEventListener('touchmove', handleTouchMove);
+        lightbox.addEventListener('touchend', handleTouchEnd);
+    </script>
+</body>
+</html>
