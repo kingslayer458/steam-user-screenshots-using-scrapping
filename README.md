@@ -1,6 +1,7 @@
 # Steam-User-Screenshots-Using-Scrapping
 ## Fetching 120 Recent Screenshots
 ## Working on fast fetching and rendering of screenshots
+## https://www.steamidfinder.com/ USE THIS TO FIND YOUR STEAM ID
 
  ![scrapping](scrapping.png) 
 
